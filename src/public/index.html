@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChefGPT 👨‍🍳</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- React (no build tools needed) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+  <style>
+    body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #f5f5f5;
+}
+
+    .page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center; /* horizontal center only */
+}
+
+    .app {
+  width: 100%;
+  max-width: 720px;
+  background: #111;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 24px 0; /* vertical breathing room */
+}
+
+
+    header {
+      padding: 20px;
+      background: #181818;
+      border-bottom: 1px solid #333;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      font-size: 0.9rem;
+      color: #bbb;
+    }
+
+    .chat {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .message {
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+
+    .user {
+      text-align: right;
+    }
+
+    .user span {
+      background: #2c5364;
+      padding: 10px 14px;
+      border-radius: 12px;
+      display: inline-block;
+      max-width: 80%;
+    }
+
+    .bot span {
+      background: #222;
+      padding: 10px 14px;
+      border-radius: 12px;
+      display: inline-block;
+      max-width: 80%;
+    }
+
+    .thinking {
+      font-style: italic;
+      color: #aaa;
+    }
+
+    .recipe-card {
+      background: #1b1b1b;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .recipe-card h4 {
+      margin: 0 0 6px;
+    }
+
+    footer {
+      display: flex;
+      border-top: 1px solid #333;
+    }
+
+    input {
+      flex: 1;
+      padding: 14px;
+      background: #111;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    button {
+      background: #e63946;
+      border: none;
+      padding: 0 22px;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #ff4d5a;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div id="root"></div>
+  </div>
+</body>
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [messages, setMessages] = useState([
+        {
+          role: "bot",
+          text: "Welcome. I’m ChefGPT — your AI sous-chef. Ask me anything culinary."
+        }
+      ]);
+      const [input, setInput] = useState("");
+      const [loading, setLoading] = useState(false);
+
+      async function sendMessage() {
+        if (!input.trim()) return;
+
+        const userMessage = { role: "user", text: input };
+        setMessages(prev => [...prev, userMessage]);
+        setInput("");
+        setLoading(true);
+
+        try {
+          const res = await fetch("http://localhost:3001/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: input })
+          });
+
+          const data = await res.json();
+
+          const botMessage = {
+            role: "bot",
+            text: data.reply,
+            recipes: data.recipes || []
+          };
+
+          setMessages(prev => [...prev, botMessage]);
+        } catch (err) {
+          setMessages(prev => [
+            ...prev,
+            { role: "bot", text: "🔥 The kitchen caught fire. Try again." }
+          ]);
+        }
+
+        setLoading(false);
+      }
+
+      return (
+        <div className="app">
+          <header>
+            <h1>ChefGPT 👨‍🍳</h1>
+            <p>Your Michelin-minded AI sous-chef</p>
+          </header>
+
+          <div className="chat">
+            {messages.map((m, i) => (
+              <div key={i} className={`message ${m.role}`}>
+                <span>
+                  {m.role === "bot" ? "🤖 ChefGPT: " : "🧑 You: "}
+                  {m.text}
+                </span>
+
+                {m.recipes && m.recipes.map((r, idx) => (
+                  <div key={idx} className="recipe-card">
+                    <h4>{r.title}</h4>
+                    <strong>Ingredients:</strong>
+                    <ul>
+                      {r.ingredients.map((ing, ii) => <li key={ii}>{ing}</li>)}
+                    </ul>
+                    <em>{r.instructions}</em>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            {loading && (
+              <div className="message bot thinking">
+                <span>👨‍🍳 ChefGPT is thinking…</span>
+              </div>
+            )}
+          </div>
+
+          <footer>
+            <input
+              placeholder="Ask about a dish, ingredient, or technique…"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && sendMessage()}
+            />
+            <button onClick={sendMessage}>➤</button>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
