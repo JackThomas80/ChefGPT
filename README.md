@@ -49,14 +49,23 @@ DNS propagation on Fly.io may take a few minutes after deploy.
 
 ### Install dependencies
 ```bash
+git clone https://github.com/JackThomas80/ChefGPT.git
+cd ChefGPT
 cd chefgpt-backend
 npm install
-
+nano .env
 OPENAI_API_KEY=your_openai_api_key_here
 PORT=3000
 
-npm run dev
-npm run build
-npm start
+npm run start
+
 
 http://localhost:3000
+
+Frontend Setup
+
+cd ../chefgpt-frontend
+npm install
+npm run dev
+
+or simply open index.html
